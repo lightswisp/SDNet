@@ -1,0 +1,12 @@
+#!/usr/bin/ruby
+
+
+# Short description:
+#
+# 1) Client will read the config file with the layer 1 nodes list 
+# 2) Client then will randomly decide to which server to connect in order to obtain the relevant information about layer 2 nodes
+# 3) Client will then connect to the random layer 2 node
+# 4) After 1-5 minutes *(time will be randomly chosen in that range) the client will repeat the step 3
+#
+# Client doesn't need to worry about layer 3, because it's the layer's 2 business
+
