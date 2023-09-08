@@ -5,7 +5,6 @@ require "logger"
 require "timeout"
 require_relative "certificate"
 
-
 include SelfSignedCertificate
 
 class TLSServer
@@ -40,10 +39,9 @@ class TLSServer
 	def start(handler)
 		loop do
 			Thread.new(@socket.accept) do |connection|
-				tls = OpenSSL::SSL::SSLSocket.new(@socket, @sslContext)
+				tls = OpenSSL::SSL::SSLSocket.new(connection, @sslContext)
 				tls.sync_close = true
 				tls_connection = nil
-				puts 'new'
 
 				Timeout.timeout(10) do
 					tls_connection = tls.accept
@@ -60,6 +58,34 @@ class TLSServer
 				    connection.close if connection
 			end
 		end
+	end
+
+end
+
+
+class TLSClient
+	def initialize(host, port, sni)
+		@host = host
+		@port = port
+		@sni = sni
+		
+	end
+
+	def connect
+		begin
+			socket = TCPSocket.new(@host, @port)
+			return nil unless socket
+
+			sslContext = OpenSSL::SSL::SSLContext.new
+	    sslContext.min_version = OpenSSL::SSL::TLS1_3_VERSION
+	    ssl = OpenSSL::SSL::SSLSocket.new(socket, sslContext)
+	    ssl.hostname = @sni
+	    ssl.sync_close = true
+	    ssl.connect
+	    return ssl
+		rescue StandardError
+			return nil
+		end	
 	end
 
 end
