@@ -12,7 +12,9 @@ class TLSServer
 	def initialize(port)
 		@logger = Logger.new(STDOUT)
 		@logger.info("Initializing...".bold)
-		if (Process.uid != 0)
+
+		# https://www.w3.org/Daemon/User/Installation/PrivilegedPorts.html
+		if (Process.uid != 0 && port < 1024)
 			@logger.fatal("You must run it as a root user".red.bold)
 			exit
 		end
@@ -68,7 +70,6 @@ class TLSClient
 		@host = host
 		@port = port
 		@sni = sni
-		
 	end
 
 	def connect
@@ -89,3 +90,4 @@ class TLSClient
 	end
 
 end
+
