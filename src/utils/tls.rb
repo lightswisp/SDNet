@@ -66,7 +66,7 @@ end
 
 
 class TLSClient
-	def initialize(host, port, sni)
+	def initialize(host, port, sni = nil)
 		@host = host
 		@port = port
 		@sni = sni
@@ -80,7 +80,7 @@ class TLSClient
 			sslContext = OpenSSL::SSL::SSLContext.new
 	    sslContext.min_version = OpenSSL::SSL::TLS1_3_VERSION
 	    ssl = OpenSSL::SSL::SSLSocket.new(socket, sslContext)
-	    ssl.hostname = @sni
+	    ssl.hostname = @sni if @sni
 	    ssl.sync_close = true
 	    ssl.connect
 	    return ssl
