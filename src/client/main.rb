@@ -1,7 +1,5 @@
 #!/usr/bin/ruby
 
-
-
 require "json"
 require_relative "../utils/tls"
 require_relative "../utils/proxy"
@@ -49,10 +47,8 @@ else
 end
 
 LOGGER.info("Starting the local proxy at #{PORT}".bold)
-proxy = LocalProxy.new(PORT, LAYER_2_NODES_LIST, MAX_BUFFER. LOGGER)
-
+proxy = LocalProxy.new(PORT, LAYER_2_NODES_LIST, MAX_BUFFER, LOGGER)
+proxy.rotate
 proxy.start
 
-# TODO, in a separate thread. And in a loop (with random time, in range 5-10 minutes)
-# proxy.rotate #
 

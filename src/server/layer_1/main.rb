@@ -3,6 +3,7 @@
 require_relative "../../utils/tls"
 
 LAYER_2_NODES_LIST = File.read("nodes.json")
+PORT = 443
 
 def handler(tls_connection, logger)
 	logger.info("New client #{tls_connection.peeraddr[-1]}".green.bold)
@@ -11,5 +12,5 @@ def handler(tls_connection, logger)
 end
 
 
-server = TLSServer.new(443)
+server = TLSServer.new(PORT)
 server.start(:handler)
