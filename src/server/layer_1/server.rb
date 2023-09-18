@@ -3,6 +3,8 @@
 require "json"
 require 'optparse'
 require_relative "../../utils/tls"
+require_relative "../../webserver/webserver"
+include WebServer
 
 ARGV << '-h' if ARGV.empty?
 
@@ -23,6 +25,7 @@ OptionParser.new do |opts|
 
 end.parse!
 
+MAX_BUFFER = 1024 * 640
 SDNET_PATH = "#{Dir.home}/.sdnet"
 Dir.mkdir(SDNET_PATH) if !Dir.exist?(SDNET_PATH)
 LAYER_2_NODES_LIST = "#{SDNET_PATH}/nodes.json"
@@ -30,12 +33,13 @@ LAYER_2_NODES_LIST = "#{SDNET_PATH}/nodes.json"
 def handler(tls_connection, logger)
 	
 	ip = tls_connection.peeraddr.last
-	cmd = tls_connection.gets
-	p cmd
+	request = tls_connection.readpartial(MAX_BUFFER)
+	request = request.split("\r\n")
+	request_head = request.first 
 	cmd = cmd.chomp
 	tls_connection.close unless cmd
 	
-	case cmd
+	case request_head
 		when /SERVER_NEW/
 			cmd = cmd.split("/")
 			logger.info("New server #{ip}".green.bold)
