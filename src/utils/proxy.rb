@@ -41,10 +41,10 @@ class LocalProxy
 					end
 
 					if header = is_alive?(ssl, request)
-						@logger.info("[CONNECT] #{request_host}:#{request_port}".bold.green)
+						@logger.info("CONNECT #{request_host}:#{request_port}".bold.green)
 						connection.puts(header)
 					else
-						@logger.fatal("[CONNECT] #{request_host}:#{request_port} is unavailable!".bold.red)
+						@logger.fatal("CONNECT #{request_host}:#{request_port} is unavailable!".bold.red)
 						ssl.close
 						connection.close
 						Thread.exit
@@ -90,7 +90,7 @@ class LocalProxy
 						connection.puts(response)
 						@logger.info("#{method_type} #{request_host}:#{request_port}".bold.green)
 		      rescue StandardError
-						@logger.fatal("[#{method_type}] failed to connect #{request_host}:#{request_port}".bold.red)
+						@logger.fatal("#{method_type} failed to connect #{request_host}:#{request_port}".bold.red)
 					ensure
 						connection.close
 		      end

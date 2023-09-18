@@ -29,13 +29,14 @@ module SelfSignedCertificate
 	      cert.sign(rsa, "SHA256")
 
 	      # saving
-				File.write(File.join(File.dirname(__FILE__),"../certificate/certificate.crt"), cert)
-				File.write(File.join(File.dirname(__FILE__),"../certificate/private.key"), rsa)
+	      Dir.mkdir("#{Dir.home}/.sdnet") if !Dir.exist?("#{Dir.home}/.sdnet")
+				File.write("#{Dir.home}/.sdnet/certificate.crt", cert)
+				File.write("#{Dir.home}/.sdnet/private.key", rsa)
 	  end
 
 	  def exists?
-			return true if File.exist?(File.join(File.dirname(__FILE__),"../certificate/certificate.crt")) && 
-										 File.exist?(File.join(File.dirname(__FILE__),"../certificate/private.key"))
+			return true if File.exist?("#{Dir.home}/.sdnet/certificate.crt") && 
+										 File.exist?("#{Dir.home}/.sdnet/private.key")
 			return false
 	  end
 end

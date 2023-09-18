@@ -10,6 +10,7 @@ include SelfSignedCertificate
 class TLSServer
 	
 	def initialize(port)
+		@port = port
 		@logger = Logger.new(STDOUT)
 		@logger.info("Initializing...".bold)
 
@@ -20,22 +21,35 @@ class TLSServer
 		end
 
 		if !SelfSignedCertificate.exists?
-			@logger.warn("Certificate not found".red)
+			@logger.warn("Certificate not found".yellow.bold)
 			@logger.info("Generating new self-signed certificate...".bold)
 			SelfSignedCertificate.create_self_signed_cert(2048, [["CN", "localhost"]], "")
-			@logger.info("Self-signed certificate is created".green.bold)
+			@logger.info("Self-signed certificate is created at #{Dir.home}/.sdnet".green.bold)
 		end
 
 		@socket = TCPServer.new(port)
 		@logger.info("Listening on #{port}".bold)
 
 		@sslContext 								 = OpenSSL::SSL::SSLContext.new
-		@sslContext.cert             = OpenSSL::X509::Certificate.new(File.open(File.join(File.dirname(__FILE__), "../certificate/certificate.crt")))
-		@sslContext.key              = OpenSSL::PKey::RSA.new(File.open(File.join(File.dirname(__FILE__), "../certificate/private.key")))
-		@sslContext.verify_mode      = OpenSSL::SSL::VERIFY_PEER
-		@sslContext.verify_depth     = 5
+		@sslContext.cert             = OpenSSL::X509::Certificate.new(File.open("#{Dir.home}/.sdnet/certificate.crt"))
+		@sslContext.key              = OpenSSL::PKey::RSA.new(File.open("#{Dir.home}/.sdnet/private.key"))
+		@sslContext.verify_mode      = OpenSSL::SSL::VERIFY_NONE
 		@sslContext.timeout          = 2
 		@sslContext.min_version      = OpenSSL::SSL::TLS1_3_VERSION
+	end
+
+	def notify(layer_1_server, layer_1_server_port, sni)
+		client = TLSClient.new(layer_1_server, layer_1_server_port, sni)
+		ssl = client.connect
+		if !ssl
+			@logger.fatal("Couldn't connect to dispatcher at #{layer_1_server}".red.bold)
+			exit
+		end
+		ssl.puts("SERVER_NEW/#{@port}/#{sni}")
+		@logger.info("Successfully notified layer 1 dispatcher".green.bold)
+		@logger.info("Sleeping for 5 seconds before disconnecting".bold)
+		sleep 5
+		ssl.close
 	end
 
 	def start(handler)
@@ -57,6 +71,7 @@ class TLSServer
 				rescue Timeout::Error
 				    connection.close if connection && tls.state == 'PINIT'
 				rescue StandardError => e
+						puts e
 				    connection.close if connection
 			end
 		end
