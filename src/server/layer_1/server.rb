@@ -25,7 +25,7 @@ end.parse!
 
 SDNET_PATH = "#{Dir.home}/.sdnet"
 Dir.mkdir(SDNET_PATH) if !Dir.exist?(SDNET_PATH)
-LAYER_2_NODES_LIST = "#{Dir.home}/.sdnet/nodes.json"
+LAYER_2_NODES_LIST = "#{SDNET_PATH}/nodes.json"
 
 def handler(tls_connection, logger)
 	
@@ -46,19 +46,19 @@ def handler(tls_connection, logger)
 				"port" => port,
 				"sni" => sni
 			}
-			nodes = JSON.parse(File.read("#{SDNET_PATH}/#{LAYER_2_NODES_LIST}"))
+			nodes = JSON.parse(File.read(LAYER_2_NODES_LIST))
 			if nodes.include?(node)
 				logger.warn("#{ip}:#{port} already exists".yellow.bold)
 			else
 				nodes << node
-				File.write("#{SDNET_PATH}/#{LAYER_2_NODES_LIST}", JSON.generate(nodes))
+				File.write(LAYER_2_NODES_LIST, JSON.generate(nodes))
 				logger.info("Saved #{ip}:#{port}".green.bold)
 			end
 		
 			tls_connection.close
 		when /CLIENT_NEW/
 			logger.info("New client #{ip}".green.bold)
-			nodes = File.read("#{SDNET_PATH}/#{LAYER_2_NODES_LIST}")
+			nodes = File.read(LAYER_2_NODES_LIST)
 			tls_connection.print(nodes)
 			tls_connection.close
 		when /GET/
@@ -76,7 +76,7 @@ def handler(tls_connection, logger)
 
 end
 
-File.write("#{SDNET_PATH}/#{LAYER_2_NODES_LIST}", "[]") unless File.exist?("#{SDNET_PATH}/#{LAYER_2_NODES_LIST}")
+File.write(LAYER_2_NODES_LIST, "[]") unless File.exist?(LAYER_2_NODES_LIST)
 
 server = TLSServer.new(OPTIONS[:port])
 server.start(:handler)
