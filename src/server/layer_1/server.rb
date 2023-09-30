@@ -35,16 +35,19 @@ def handler(tls_connection, logger)
 	ip = tls_connection.peeraddr.last
 	request = tls_connection.readpartial(MAX_BUFFER)
 	request = request.split("\r\n")
-	request_head = request.first 
-	cmd = cmd.chomp
-	tls_connection.close unless cmd
-	
+	tls_connection.close unless request
+	request_head = request.first
+	tls_connection.close unless request_head
+	request_head = request_head.chomp
+
+	p request_head
+
 	case request_head
 		when /SERVER_NEW/
-			cmd = cmd.split("/")
+			request_head = request_head.split("/")
 			logger.info("New server #{ip}".green.bold)
-			port = cmd[1]
-			sni = cmd[2]
+			port = request_head[1].to_s
+			sni = request_head[2]
 			node = {
 				"ip" => ip,
 				"port" => port,
@@ -67,11 +70,8 @@ def handler(tls_connection, logger)
 			tls_connection.close
 		when /GET/
 			logger.info("New website visitor #{ip}, lets do some magic :)".green.bold)
-			webpage = File.read(File.join(__dir__, "../../templates/layer_1/index.html"))
-			response = "HTTP/1.1 200 OK\r\nDate: #{Time.now}\r\nContent-Type: text/html\r\n\r\n#{webpage}"
-			tls_connection.puts(
-				response
-			)
+			response = WebServer.response(request.first, 1, logger)
+			tls_connection.puts(response)
 			tls_connection.close
 		else
 			logger.fatal("Unknown command, closing the connection.".red.bold)

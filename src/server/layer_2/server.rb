@@ -2,7 +2,8 @@
 
 require 'optparse'
 require_relative "../../utils/tls"
-
+require_relative "../../webserver/webserver"
+include WebServer
 
 ARGV << '-h' if ARGV.empty?
 OPTIONS = {}
@@ -55,7 +56,6 @@ def handler(tls_connection, logger)
 
 	request_head = request.split("\r\n")
 	request_method = request_head.first.split(" ").first
-
 	if request_method =~ /CONNECT/
 		# a bit of parsing
 		request_host, request_port = request_head.first.split(' ')[1].split(':')
@@ -95,9 +95,11 @@ def handler(tls_connection, logger)
     request_port = 80 if request_port.nil?
     request_port = request_port.to_i
 
+		
 		if request_host == PUBLIC_IP
-			# TODO 
-			# Show the webpage
+			logger.info("New website visitor #{tls_connection.peeraddr[-1]}, lets do some magic :)".green.bold)
+			response = WebServer.response(request_head.first, 2, logger)
+			tls_connection.puts(response)
 			tls_connection.close
 			Thread.exit
 		end
@@ -111,7 +113,6 @@ def handler(tls_connection, logger)
 	    tls_connection.close
 	    Thread.exit
     rescue StandardError
-    	puts e
       logger.warn("#{request_host}:#{request_port}".bold.yellow)
       tls_connection.puts(CONN_FAIL)
       tls_connection.close if tls_connection
