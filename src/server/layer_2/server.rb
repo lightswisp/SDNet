@@ -1,7 +1,8 @@
 #!/usr/bin/ruby
 
-require 'optparse'
-require_relative "../../utils/tls"
+require "optparse"
+require "net/http"
+require_relative "utils/proxy"
 require_relative "../../webserver/webserver"
 include WebServer
 
@@ -38,7 +39,7 @@ OptionParser.new do |opts|
 end.parse!
 
 
-PUBLIC_IP = `curl -s ifconfig.me`
+PUBLIC_IP = Net::HTTP.get URI "https://api.ipify.org"
 MAX_BUFFER = 1024 * 640 # 640KB
 CONN_OK = "HTTP/1.1 200 OK\r\nDate: #{Time.now}\r\n\r\n"
 CONN_FAIL = "HTTP/1.1 502 Bad Gateway\r\nDate: #{Time.now}\r\n\r\n<h1>502 Bad Gateway</h1>"
@@ -56,75 +57,76 @@ def handler(tls_connection, logger)
 
 	request_head = request.split("\r\n")
 	request_method = request_head.first.split(" ").first
-	if request_method =~ /CONNECT/
-		# a bit of parsing
-		request_host, request_port = request_head.first.split(' ')[1].split(':')
-		
-		endpoint_connection = TCPSocket.new(request_host, request_port)
-    endpoint_connection.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
-		if endpoint_connection
-			tls_connection.puts(CONN_OK)
-		else
-			tls_connection.puts(CONN_FAIL)
-			tls_connection.close
-			Thread.exit
-		end
-
-		begin
-			loop do
-				fds = IO.select([tls_connection, endpoint_connection], nil, nil, 10)
-				if fds[0].member?(tls_connection)
-					buf = tls_connection.readpartial(MAX_BUFFER)
-					endpoint_connection.print(buf)
-				elsif fds[0].member?(endpoint_connection)
-					buf = endpoint_connection.readpartial(MAX_BUFFER)
-					tls_connection.print(buf)
-				end
+	
+	case request_method
+		when /CONNECT/
+			request_host, request_port = request_head.first.split(' ')[1].split(':')		
+			endpoint_connection = TCPSocket.new(request_host, request_port)
+	    #endpoint_connection.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+			if endpoint_connection
+				tls_connection.puts(CONN_OK)
+			else
+				tls_connection.puts(CONN_FAIL)
+				tls_connection.close
+				Thread.exit
 			end
-		rescue StandardError
-			logger.info("Closing connection with #{request_host}:#{request_port}".red.bold)
-			endpoint_connection.close if endpoint_connection
-			tls_connection.close if tls_connection
-			Thread.exit
-		end
 
-		
-	else # NON CONNECT
-		host = request_head[1].downcase.gsub('host:', '').strip
-    request_host, request_port = host.split(':')
-    request_port = 80 if request_port.nil?
-    request_port = request_port.to_i
-
-		
-		if request_host == PUBLIC_IP
-			logger.info("New website visitor #{tls_connection.peeraddr[-1]}, lets do some magic :)".green.bold)
-			response = WebServer.response(request_head.first, 2, logger)
-			tls_connection.puts(response)
+			begin
+				loop do
+					fds = IO.select([tls_connection, endpoint_connection], nil, nil, 5)
+					if fds[0].member?(tls_connection)
+						buf = tls_connection.readpartial(MAX_BUFFER)
+						endpoint_connection.print(buf)
+					elsif fds[0].member?(endpoint_connection)
+						buf = endpoint_connection.readpartial(MAX_BUFFER)
+						tls_connection.print(buf)
+					end
+				end
+			rescue StandardError
+				logger.info("Closing connection with #{request_host}:#{request_port}".red.bold)
+				endpoint_connection.close if endpoint_connection
+				tls_connection.close if tls_connection
+				Thread.exit
+			end
+		when /DISPATCHER_PING/
+			logger.info("Received DISPATCHER_PING from #{OPTIONS[:addr]}")
+			tls_connection.puts("DISPATCHER_PONG")
 			tls_connection.close
-			Thread.exit
-		end
+		else
+			host = request_head[1].downcase.gsub('host:', '').strip
+	    request_host, request_port = host.split(':')
+	    request_port = 80 if request_port.nil?
+	    request_port = request_port.to_i
 
-    begin
-	    endpoint_connection = TCPSocket.new(request_host, request_port)
-	    logger.info("#{request_host}:#{request_port}".bold.green)
-	    endpoint_connection.puts(request)
-	    response = endpoint_connection.readpartial(MAX_BUFFER)
-	    tls_connection.puts(response)
-	    tls_connection.close
-	    Thread.exit
-    rescue StandardError
-      logger.warn("#{request_host}:#{request_port}".bold.yellow)
-      tls_connection.puts(CONN_FAIL)
-      tls_connection.close if tls_connection
-      Thread.exit
-    end
-		
+			if request_host == PUBLIC_IP
+				logger.info("New website visitor #{tls_connection.peeraddr[-1]}, lets do some magic :)".green.bold)
+				response = WebServer.response(request_head.first, 2, logger)
+				tls_connection.puts(response)
+				tls_connection.close
+				Thread.exit
+			end
+
+	    begin
+		    endpoint_connection = TCPSocket.new(request_host, request_port)
+		    logger.info("#{request_host}:#{request_port}".bold.green)
+		    endpoint_connection.puts(request)
+		    response = endpoint_connection.readpartial(MAX_BUFFER)
+		    tls_connection.puts(response)
+		    tls_connection.close
+		    Thread.exit
+	    rescue StandardError
+	      logger.warn("#{request_host}:#{request_port}".bold.yellow)
+	      tls_connection.puts(CONN_FAIL)
+	      tls_connection.close if tls_connection
+	      Thread.exit
+	    end
 
 	end
+
 	 
 end
 
-server = TLSServer.new(OPTIONS[:port])
+server = ProxyServer.new(OPTIONS[:port])
 server.notify(OPTIONS[:addr], OPTIONS[:dport], OPTIONS[:sni])
 server.start(:handler)
 

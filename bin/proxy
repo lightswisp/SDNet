@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+
+echo "Please run it like this, ./proxy <d_addr> <d_port> <l_port> <sni>"
+
+ruby ../src/server/layer_2/server.rb -a $1 -d $2 -p $3 -s $4

@@ -2,7 +2,7 @@
 
 require "json"
 require 'optparse'
-require_relative "../../utils/tls"
+require_relative "utils/dispatcher"
 require_relative "../../webserver/webserver"
 include WebServer
 
@@ -40,7 +40,7 @@ def handler(tls_connection, logger)
 	tls_connection.close unless request_head
 	request_head = request_head.chomp
 
-	p request_head
+	logger.info("DEBUG: #{request_head}")
 
 	case request_head
 		when /SERVER_NEW/
@@ -81,6 +81,6 @@ def handler(tls_connection, logger)
 end
 
 File.write(LAYER_2_NODES_LIST, "[]") unless File.exist?(LAYER_2_NODES_LIST)
-
-server = TLSServer.new(OPTIONS[:port])
+server = Dispatcher.new(OPTIONS[:port])
+server.start_checker(LAYER_2_NODES_LIST)
 server.start(:handler)
