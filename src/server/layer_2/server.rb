@@ -62,7 +62,7 @@ def handler(tls_connection, logger)
 		when /CONNECT/
 			request_host, request_port = request_head.first.split(' ')[1].split(':')		
 			endpoint_connection = TCPSocket.new(request_host, request_port)
-	    endpoint_connection.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+	    #endpoint_connection.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
 			if endpoint_connection
 				tls_connection.puts(CONN_OK)
 			else
