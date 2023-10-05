@@ -1,0 +1,19 @@
+FROM ruby:3.1.2
+
+WORKDIR /dispatcher
+
+COPY Gemfile ./
+
+RUN bundle install
+
+COPY . .
+
+# -a => dispatcher address
+# -d => dispatcher port
+# -p => local port
+# -s => SNI
+
+#CMD sh -c ruby src/server/layer_2/server.rb -a $DISPATCHER_ADDRESS -d $DISPATCHER_PORT -p $LOCAL_PORT -s $SNI
+CMD ["ruby", "src/server/layer_2/server.rb", "-a", "94.241.169.248", "-d", "443", "-p", "443", "-s", "example.com"]
+
+EXPOSE $LOCAL_PORT

@@ -1,6 +1,0 @@
-#!/usr/bin/bash
-
-echo "Please run it like this, ./dispatcher <port>"
-
-ruby ../src/server/layer_1/server.rb -p $1
-
